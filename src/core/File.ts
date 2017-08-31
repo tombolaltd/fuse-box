@@ -19,6 +19,9 @@ export class File {
     public isFuseBoxBundle = false;
 
     public es6module = false;
+
+    public dependants = new Set<string>();
+    public dependencies = new Set<string>();
     /**
      * In order to keep bundle in a bundle
      * We can't destory the original contents
@@ -141,6 +144,19 @@ export class File {
         this.absPath = info.absPath;
         if (this.absPath) {
             this.relativePath = ensureFuseBoxPath(path.relative(this.context.appRoot, this.absPath));
+        }
+    }
+
+    public registerDependant(file: File) {
+        if (!this.dependants.has(file.info.fuseBoxPath)) {
+            this.dependants.add(file.info.fuseBoxPath);
+        }
+    }
+
+
+    public registerDependency(file: File) {
+        if (!this.dependencies.has(file.info.fuseBoxPath)) {
+            this.dependencies.add(file.info.fuseBoxPath);
         }
     }
 
