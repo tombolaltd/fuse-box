@@ -113,6 +113,11 @@ export class VueComponentClass implements Plugin {
     file.sourceMap = concat.sourceMap.toString();
     file.analysis.parseUsingAcorn();
     file.analysis.analyze();
+
+    if (file.info.fuseBoxPath.indexOf('club/index.vue') > -1) {
+      console.log('File.transform()', file.analysis.dependencies)
+    }
+
     file.analysis.dependencies.forEach(dep => file.resolveLater(dep));
   }
 }

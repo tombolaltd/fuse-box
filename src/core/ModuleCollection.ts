@@ -215,8 +215,14 @@ export class ModuleCollection {
                 let file = new File(this.context, this.pm.init(modulePath));
                 return this.resolve(file);
             })
-                .then(() => this.context.resolve())
-                .then(() => this.resolveLater())
+                .then(() => {
+                  console.log('ModuleCollection starting resolve()')
+                  return this.context.resolve()
+                })
+                .then(() => {
+                  console.log('ModuleCollection starting resolveLater()')
+                  return this.resolveLater()
+                })
                 .then(() => {
                     return this.context.useCache ? this.context.cache.resolve(this.toBeResolved) : this.toBeResolved;
                 }).then(toResolve => {
@@ -238,12 +244,20 @@ export class ModuleCollection {
 
     private resolveLater() {
         let collection = this.context.getDelayedResolutionCollection();
+
+        console.log('Keys for ModuleCollection.resolveLater()', collection.keys())
+
         if (!collection) {
             return;
         }
         let depsOnly = false;
         return each(collection, (file: File, key: string) => {
             const resolved = this.resolve(file, file.shouldIgnoreDeps);
+
+            if (file.info.fuseBoxPath.indexOf('/component') > -1) {
+              console.log('this.resolve() return value', file.info.fuseBoxPath, resolved)
+            }
+
             if (file.resolveDepsOnly) {
                 depsOnly = true;
             }
@@ -251,7 +265,6 @@ export class ModuleCollection {
             return resolved;
         }).then(() => {
             if (collection.size > 0) {
-                // recursive
                 return this.resolveLater();
             }
         }).then(() => {
@@ -364,7 +377,11 @@ export class ModuleCollection {
      *
      * @memberOf ModuleCollection
      */
-    public resolve(file: File, shouldIgnoreDeps?: boolean) {
+    public async resolve(file: File, shouldIgnoreDeps?: boolean) {
+      if (file.info.fuseBoxPath.indexOf('club/index.vue') > -1) {
+        console.log('resolve() for', file.info.fuseBoxPath)
+      }
+
         file.shouldIgnoreDeps = shouldIgnoreDeps;
         file.collection = this;
         if (this.bundle) {
@@ -404,7 +421,15 @@ export class ModuleCollection {
 
             // Consuming file
             // Here we read it and return a list of require statements
-            file.consume();
+            if (file.info.fuseBoxPath.indexOf('club/index.vue') > -1) {
+              console.log('before consuming()', file.info.fuseBoxPath)
+            }
+
+            await file.consume();
+
+            if (file.info.fuseBoxPath.indexOf('club/index.vue') > -1) {
+              console.log('after consuming()', file.analysis.dependencies)
+            }
 
             // if a file belong to a split bundle, pipe it there
             if (this.isDefault && this.context.shouldSplit(file)) {

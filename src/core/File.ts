@@ -188,7 +188,16 @@ export class File {
         file.resolveDepsOnly = this.resolveDepsOnly;
         collection.set(file.info.absPath, file);
 
+        if (str.indexOf('room/') > -1) {
+          console.log('File.resolveLater() keys', collection.keys())
+          console.log('File.resolveLater() path', file.info.absPath)
+        }
+
         if (this.analysis.dependencies.indexOf(str) === -1) {
+          if (str.indexOf('room/') > -1) {
+            console.log('file.resolveLater()', file.info.absPath);
+          }
+
           this.analysis.dependencies.push(str);
         }
     }
@@ -317,20 +326,32 @@ export class File {
 
                 if (Array.isArray(target)) {
                     target.forEach(plugin => {
+                      if (this.info.fuseBoxPath.indexOf('club/index.vue') > -1) {
+                        console.log('running transform() on Array of plugins');
+                      }
+
                         if (utils.isFunction(plugin.transform)) {
                             this.context.debugPlugin(plugin, `Captured ${this.info.fuseBoxPath}`);
                             tasks.push(() => plugin.transform.apply(plugin, [this]));
                         }
                     });
                 } else {
+                  if (this.info.fuseBoxPath.indexOf('club/index.vue') > -1) {
+                    console.log('running transform() on single plugin');
+                  }
+
                     if (utils.isFunction(target.transform)) {
                         this.context.debugPlugin(target, `Captured ${this.info.fuseBoxPath}`);
                         tasks.push(() => target.transform.apply(target, [this]));
                     }
                 }
             }
-            return this.context.queue(each(tasks, promise => promise()));
+            const promise = each(tasks, promise => promise());
+            this.context.queue(promise);
+            return promise;
         }
+
+        return Promise.resolve();
     }
 
     /**
@@ -363,7 +384,9 @@ export class File {
                 }
             }, this);
         }
-        return this.context.queue(each(tasks, promise => promise()));
+        const promise = each(tasks, promise => promise());
+        this.context.queue(promise);
+        return promise;
     }
     /**
      *
@@ -452,6 +475,7 @@ export class File {
         if (this.context.polyfillNonStandardDefaultUsage) {
             this.addStringDependency('fuse-heresy-default');
         }
+
         if (/\.ts(x)?$/.test(this.absPath)) {
 
             this.context.debug("Typescript", `Captured  ${this.info.fuseBoxPath}`);
@@ -485,11 +509,19 @@ export class File {
             }
             return;
         }
-        this.tryPlugins();
-        if (!this.isLoaded) {
-            this.contents = "";
-            this.context.fuse.producer.addWarning("missing-plugin", `The contents of ${this.absPath} weren't loaded. Missing a plugin?`);
+
+        if (this.info.fuseBoxPath.indexOf('club/index.vue') > -1) {
+          console.log('tryPlugins()');
         }
+
+        return this.tryPlugins().then((result) => {
+          if (!this.isLoaded) {
+              this.contents = "";
+              this.context.fuse.producer.addWarning("missing-plugin", `The contents of ${this.absPath} weren't loaded. Missing a plugin?`);
+          }
+
+          return result;
+        });
     }
 
     public fileDependsOnLastChangedCSS() {
